@@ -1,37 +1,53 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
-import { Producto } from './entities/producto.entity';
+import { PrismaService } from '../prisma/prisma.service';
+
 @Injectable()
 export class ProductosService {
-  private productos: Producto[] = [];
-  private siguienteId = 1;
+  constructor(private readonly prisma: PrismaService) {}
+
   create(createProductoDto: CreateProductoDto) {
-    const producto = {
-      id: this.siguienteId++,
-      ...createProductoDto,
-    };
-    this.productos.push(producto);
-    return producto;
+    return this.prisma.productos.create({
+      data: createProductoDto,
+    });
   }
+
   findAll() {
-    return this.productos;
+    return this.prisma.productos.findMany({
+      include: {
+        categorias: true,
+      },
+    });
   }
-  findOne(id: number) {
-    const producto = this.productos.find(p => p.id === id);
+
+  async findOne(id: number) {
+    const producto = await this.prisma.productos.findUnique({
+      where: { id },
+      include: {
+        categorias: true,
+      },
+    });
     if (!producto) {
       throw new NotFoundException('Producto no encontrado');
     }
     return producto;
   }
-  update(id: number, updateProductoDto: UpdateProductoDto) {
-    const producto = this.findOne(id);
-    Object.assign(producto, updateProductoDto);
-    return producto;
+
+  async update(id: number, updateProductoDto: UpdateProductoDto) {
+    await this.findOne(id);
+    return this.prisma.productos.update({
+      where: { id },
+      data: updateProductoDto,
+    });
   }
-  remove(id: number) {
-    const producto = this.findOne(id);
-    this.productos = this.productos.filter(p => p.id !== id);
+
+  async remove(id: number) {
+    await this.findOne(id);
+    await this.prisma.productos.delete({
+      where: { id },
+    });
     return { mensaje: 'Producto eliminado correctamente' };
   }
 }
+
