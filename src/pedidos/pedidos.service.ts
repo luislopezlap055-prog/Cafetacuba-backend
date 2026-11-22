@@ -1,37 +1,74 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreatePedidoDto } from './dto/create-pedido.dto';
 import { UpdatePedidoDto } from './dto/update-pedido.dto';
-import { Pedido } from './entities/pedido.entity';
+
 @Injectable()
 export class PedidosService {
-  private pedidos: Pedido[] = [];
-  private siguienteId = 1;
+  constructor(private readonly prisma: PrismaService) {}
+
   create(createPedidoDto: CreatePedidoDto) {
-    const pedido = {
-      id: this.siguienteId++,
-      ...createPedidoDto,
-    };
-    this.pedidos.push(pedido);
-    return pedido;
+    return this.prisma.pedidos.create({
+      data: {
+        usuarioId: createPedidoDto.usuarioId,
+        productos: createPedidoDto.productos,
+        total: createPedidoDto.total,
+        estado: createPedidoDto.estado,
+      },
+    });
   }
+
   findAll() {
-    return this.pedidos;
+    return this.prisma.pedidos.findMany({
+      include: {
+        usuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+          },
+        },
+      },
+    });
   }
-  findOne(id: number) {
-    const pedido = this.pedidos.find(p => p.id === id);
+
+  async findOne(id: number) {
+    const pedido = await this.prisma.pedidos.findUnique({
+      where: { id },
+      include: {
+        usuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+          },
+        },
+      },
+    });
+
     if (!pedido) {
       throw new NotFoundException('Pedido no encontrado');
     }
+
     return pedido;
   }
-  update(id: number, updatePedidoDto: UpdatePedidoDto) {
-    const pedido = this.findOne(id);
-    Object.assign(pedido, updatePedidoDto);
-    return pedido;
+
+  async update(id: number, updatePedidoDto: UpdatePedidoDto) {
+    await this.findOne(id);
+
+    return this.prisma.pedidos.update({
+      where: { id },
+      data: updatePedidoDto,
+    });
   }
-  remove(id: number) {
-    this.findOne(id);
-    this.pedidos = this.pedidos.filter(p => p.id !== id);
+
+  async remove(id: number) {
+    await this.findOne(id);
+
+    await this.prisma.pedidos.delete({
+      where: { id },
+    });
+
     return { mensaje: 'Pedido eliminado correctamente' };
   }
 }
