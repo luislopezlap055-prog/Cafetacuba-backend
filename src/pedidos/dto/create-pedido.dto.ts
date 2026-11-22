@@ -3,6 +3,7 @@ import { ArrayNotEmpty, IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPosi
 export class CreatePedidoDto {
   @IsInt({ message: 'El ID del usuario debe ser un número entero' })
   @IsNotEmpty({ message: 'El ID del usuario es obligatorio' })
+  @IsPositive({ message: 'El ID del usuario debe ser mayor a 0' })
   usuarioId: number;
 
   @IsArray({ message: 'Los productos deben enviarse en forma de lista' })
